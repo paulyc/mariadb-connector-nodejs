@@ -34,7 +34,10 @@ describe('json', () => {
     shareConn
       .query('SELECT * FROM `' + tableName + '`')
       .then(rows => {
-        if (shareConn.info.isMariaDB()) {
+        if (
+          shareConn.info.isMariaDB() &&
+          !shareConn.info.hasMinVersion(10, 5, 0)
+        ) {
           const val1 = JSON.parse(rows[0].val1);
           const val2 = JSON.parse(rows[1].val1);
           assert.equal(val1.id, 2);
@@ -77,13 +80,24 @@ describe('json', () => {
     );
 
     shareConn
-      .query('SELECT * FROM `test-json-return-type`')
+      .query(
+        "SELECT val1, val2, val3, JSON_COMPACT('" +
+          jsonString +
+          "') as val4 FROM `test-json-return-type`"
+      )
       .then(rows => {
-        if (shareConn.info.isMariaDB()) {
+        console.log(rows);
+        if (
+          shareConn.info.isMariaDB() &&
+          !shareConn.info.hasMinVersion(10, 5, 0)
+        ) {
           assert.equal(rows[0].val1, jsonString);
+          assert.equal(rows[0].val4, jsonString);
         } else {
           assert.equal(rows[0].val1.id, 2);
           assert.equal(rows[0].val1.val, 'test');
+          assert.equal(rows[0].val4.id, 2);
+          assert.equal(rows[0].val4.val, 'test');
         }
         assert.equal(rows[0].val2, jsonString);
         assert.equal(rows[0].val3, jsonString);
