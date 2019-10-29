@@ -1,6 +1,6 @@
 {
   "name": "mariadb",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "fast mariadb/mysql connector.",
   "main": "promise.js",
   "types": "types/index.d.ts",
@@ -46,7 +46,7 @@
   "license": "LGPL-2.1+",
   "dependencies": {
     "@types/geojson": "^7946.0.7",
-    "@types/node": "^12.7.4",
+    "@types/node": "^12.7.5",
     "denque": "^1.4.1",
     "iconv-lite": "^0.5.0",
     "long": "^4.0.0",
