@@ -12,53 +12,44 @@ environment:
   TEST_LOG_PACKETS: true
   matrix:
 
-    - DB: '10.4.6'
-      MEM: "21"
-      nodejs_version: "8"
-
-    - DB: '10.4.6'
+    - DB: '10.4.13'
       MEM: "21"
       nodejs_version: "10"
 
-    - DB: '10.4.6'
+    - DB: '10.4.13'
       MEM: "21"
       nodejs_version: "12"
       SKIP_LEAK: "1"
 
-    - DB: '10.4.6'
+    - DB: '10.4.13'
       nodejs_version: "12"
       MEM: "21"
       TEST_ZIP: 1
       SKIP_LEAK: "1"
 
-    - DB: '10.4.6'
+    - DB: '10.4.13'
       nodejs_version: "12"
       MEM: "21"
       BENCH: "1"
       SKIP_LEAK: "1"
 
-    - DB: '10.3.16'
+    - DB: '10.5.4'
       MEM: "21"
       nodejs_version: "12"
       SKIP_LEAK: "1"
 
-    - DB: '10.2.25'
+    - DB: '10.3.23'
       MEM: "21"
       nodejs_version: "12"
       SKIP_LEAK: "1"
 
-    - DB: '10.1.40'
+    - DB: '10.2.32'
       MEM: "21"
       nodejs_version: "12"
       SKIP_LEAK: "1"
 
-    - DB: '10.0.38'
+    - DB: '10.1.45'
       MEM: "21"
-      nodejs_version: "12"
-      SKIP_LEAK: "1"
-
-    - DB: '5.5.64'
-      MEM: "5"
       nodejs_version: "12"
       SKIP_LEAK: "1"
 
@@ -68,8 +59,7 @@ cache:
 clone_folder: c:\projects\mariadb-connector-nodejs
 
 install:
-  - cmd: set FILE=http://ftp.hosteurope.de/mirror/archive.mariadb.org//mariadb-%DB%/winx64-packages/mariadb-%DB%-winx64.msi
-  - ps: Start-FileDownload $Env:FILE -FileName server.msi
+  - cmd: appveyor-download.bat
   - cmd: msiexec /i server.msi INSTALLDIR=c:\projects\server SERVICENAME=mariadb ALLOWREMOTEROOTACCESS=true /qn
   - cmd: "\"c:\\projects\\server\\bin\\mysql.exe\" -e \"create database testn\" --user=root"
   - cmd: echo [mysqld] > c:\projects\server\data\my.ini
@@ -96,6 +86,6 @@ build: off
 test_script:
   - node --version
   - if "%SKIP_LEAK%" == "" npm install node-memwatch
-  - if "%BENCH%" == "1" ( npm install microtime ) else ( npm test )
+  - if "%BENCH%" == "1" ( npm install microtime ) else ( npm run test )
   - if "%BENCH%" == "1" ( npm install promise-mysql mysql2 )
   - if "%BENCH%" == "1" ( node c:\projects\mariadb-connector-nodejs\benchmarks\benchmarks.js )

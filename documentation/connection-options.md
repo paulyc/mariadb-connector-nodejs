@@ -333,7 +333,7 @@ mariadb.createConnection({
 
 |option|description|type|default| 
 |---:|---|:---:|:---:| 
-| **charset** | Protocol character set used with the server. Connection collation will be the [default collation](https://github.com/MariaDB/mariadb-connector-nodejs/blob/master/lib/const/collations.js#L372) associated with charset. It's mainly used for micro-optimizations.  The default is often sufficient. |*string* |UTF8MB4| 
+| **charset** | Protocol character set used with the server. Connection collation will be the [default collation](https://github.com/mariadb-corporation/mariadb-connector-nodejs/blob/master/lib/const/collations.js#L372) associated with charset. It's mainly used for micro-optimizations.  The default is often sufficient. |*string* |UTF8MB4| 
 | **collation** | (used in replacement of charset) Permit to defined collation used for connection. This will defined the charset encoding used for exchanges with database and defines the order used when comparing strings. It's mainly used for micro-optimizations|*string* |UTF8MB4_UNICODE_CI| 
 | **dateStrings** | Whether to retrieve dates as strings or as `Date` objects. |*boolean* |false| 
 | **debug** |  Logs all exchanges with the server.  Displays in hexa.|*boolean* |false| 
@@ -353,6 +353,8 @@ mariadb.createConnection({
 | **initSql** | When a connection is established, permit to execute commands before using connection|*string|array* |
 | **bulk** | disabled bulk command in batch|*boolean* |
 | **permitConnectionWhenExpired** | Permit a user with expired password to connect. Only possible operation in this case will be to change password ('SET PASSWORD=PASSWORD('XXX')')|*boolean* |false|
+| **forceVersionCheck** | Force server version check by explicitly using SELECT VERSION(), not relying on server initial packet.<br/><i><small>Since version 2.2.0</small></i> |*boolean* |false|
+| **checkDuplicate** | Indicate to throw an exception if result-set will not contain some data due to having duplicate identifier. <br/>JSON cannot have multiple identical key, so query like `SELECT 1 as i, 2 as i` cannot result in { i:1, i:2 }, 'i:1' would be skipped. <br/>When `checkDuplicate` is enable (default) driver will throw an error if some data are skipped. Duplication error can be avoided by multiple ways, like using unique aliases or using options [`rowsAsArray`](https://github.com/mariadb-corporation/mariadb-connector-nodejs/blob/master/documentation/promise-api.md#rowsasarray) / [`nestTables`](https://github.com/mariadb-corporation/mariadb-connector-nodejs/blob/master/documentation/promise-api.md#nestTables) for example <br/><i><small>Since version 2.3.0</small></i>|*boolean* | true |
 
 
 

@@ -57,8 +57,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN { \
-		echo "mariadb-server-10.4" mysql-server/root_password password 'unused'; \
-		echo "mariadb-server-10.4" mysql-server/root_password_again password 'unused'; \
+		echo "mariadb-server-10.5" mysql-server/root_password password 'unused'; \
+		echo "mariadb-server-10.5" mysql-server/root_password_again password 'unused'; \
 	} | debconf-set-selections
 
 RUN apt-get update -y
@@ -79,7 +79,6 @@ RUN dpkg -R --unpack /root/
 RUN apt-get install -f -y
 
 RUN rm -rf /var/lib/apt/lists/* \
-    	&& sed -ri 's/^user\s/#&/' /etc/mysql/my.cnf /etc/mysql/conf.d/* \
     	&& rm -rf /var/lib/mysql && mkdir -p /var/lib/mysql /var/run/mysqld \
     	&& chown -R mysql:mysql /var/lib/mysql /var/run/mysqld \
     	&& chmod 777 /var/run/mysqld \

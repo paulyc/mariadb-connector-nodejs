@@ -53,6 +53,28 @@ describe('test connection options', () => {
     }
   });
 
+  it('unknown collation', () => {
+    try {
+      new ConnOptions({ collation: 'not_existing_collation' });
+      throw new Error('Must have thrown error');
+    } catch (e) {
+      assert.isTrue(e.message.includes("Unknown collation 'not_existing_collation'"));
+    }
+  });
+
+  it('timezone error', () => {
+    try {
+      new ConnOptions({ timezone: '+02:20' });
+      throw new Error('Must have thrown error');
+    } catch (e) {
+      assert.isTrue(
+        e.message.includes(
+          "timezone format incompatible with IANA standard timezone format was '+02:20'"
+        )
+      );
+    }
+  });
+
   it('wrong format', () => {
     try {
       new ConnOptions(
@@ -65,7 +87,7 @@ describe('test connection options', () => {
 
   it('with options', () => {
     const result = new ConnOptions(
-      'mariadb://root:pass@example.com:3307/db?metaAsArray=false&ssl=true&dateStrings=true'
+      'mariadb://root:pass@example.com:3307/db?metaAsArray=false&ssl=true&dateStrings=true&charsetNumber=200'
     );
     assert.equal(result.database, 'db');
     assert.equal(result.host, 'example.com');
@@ -75,6 +97,19 @@ describe('test connection options', () => {
     assert.equal(result.port, 3307);
     assert.equal(result.ssl, true);
     assert.equal(result.user, 'root');
+    assert.equal(result.collation.index, 200);
+  });
+
+  it('URL decoding test', () => {
+    const result = new ConnOptions(
+      'mariadb://root%C3%A5:p%40ssword@example.com:3307/%D1%88db?connectAttributes=%7B"par1":"bouh","par2":"bla"%7D'
+    );
+    assert.equal(result.database, 'шdb');
+    assert.equal(result.host, 'example.com');
+    assert.equal(result.password, 'p@ssword');
+    assert.equal(result.port, 3307);
+    assert.equal(result.user, 'rootå');
+    assert.deepEqual(result.connectAttributes, { par1: 'bouh', par2: 'bla' });
   });
 
   it('unknown option', () => {
@@ -94,10 +129,27 @@ describe('test connection options', () => {
   it('wrong maxAllowedPacket value', () => {
     try {
       new ConnOptions({ maxAllowedPacket: 'abc' });
-      return new Error('must have thrown exception');
+      throw new Error('must have thrown exception');
     } catch (e) {
       assert.isTrue(e.message.includes("maxAllowedPacket must be an integer. was 'abc'"));
     }
+  });
+
+  it('wrong maxAllowedPacket value', () => {
+    try {
+      new ConnOptions({ collation: 'wrongcollation' });
+      throw new Error('must have thrown exception');
+    } catch (e) {
+      assert.isTrue(e.message.includes("Unknown collation 'wrongcollation'"));
+    }
+  });
+
+  it('wrong value is skipped charsetNumber', () => {
+    const result = new ConnOptions(
+      'mariadb://root:pass@example.com:3307/db?wrongOption=false&ssl=true&dateStrings=true&charsetNumber=aaa'
+    );
+    assert.equal(result.database, 'db');
+    assert.isUndefined(result.charsetNumber);
   });
 
   describe('parsing', () => {

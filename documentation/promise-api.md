@@ -205,6 +205,7 @@ Essential options list:
 | **`compress`** | Compresses the exchange with the database through gzip.  This permits better performance when the database is not in the same location.  |*boolean*| false|
 | **`connectTimeout`** | Sets the connection timeout in milliseconds. |*integer* | 10 000|
 | **`socketTimeout`** | Sets the socket timeout in milliseconds after connection succeeds. A value of `0` disables the timeout. |*integer* | 0|
+| **`queryTimeout`** | Set maximum query time in ms (an error will be thrown if limit is reached). 0 or undefined meaning no timeout. This can be superseded for a query using [`timeout`](https://github.com/mariadb-corporation/mariadb-connector-nodejs/blob/master/documentation/promise-api.md#timeout) option|*int* |0| 
 | **`rowsAsArray`** | Returns result-sets as arrays, rather than JSON. This is a faster way to get results. For more information, see Query. |*boolean* | false|
 
 For more information, see the [Connection Options](/documentation/connection-options.md) documentation. 
@@ -279,7 +280,9 @@ Specific options for pools are :
 | **`minimumIdle`** | Permit to set a minimum number of connection in pool. **Recommendation is to use fixed pool, so not setting this value**.|*integer* | *set to connectionLimit value* |
 | **`minDelayValidation`** | When asking a connection to pool, the pool will validate the connection state. "minDelayValidation" permits disabling this validation if the connection has been borrowed recently avoiding useless verifications in case of frequent reuse of connections. 0 means validation is done each time the connection is asked. (in ms) |*integer*| 500|
 | **`noControlAfterUse`** | After giving back connection to pool (connection.end) connector will reset or rollback connection to ensure a valid state. This option permit to disable those controls|*boolean*| false|
-| **`resetAfterUse`** | When a connection is given back to pool, reset the connection if the server allows it (MariaDB >=10.2.4 / MySQL >= 5.7.3). If disabled or server version doesn't allows reset, pool will only rollback open transaction if any|*boolean*| true|
+| **`resetAfterUse`** | When a connection is given back to pool, reset the connection if the server allows it (only for MariaDB version >= 10.2.22 /10.3.13). If disabled or server version doesn't allows reset, pool will only rollback open transaction if any|*boolean*| true|
+| **`leakDetectionTimeout`** |Permit to indicate a timeout to log connection borrowed from pool. When a connection is borrowed from pool and this timeout is reached, a message will be logged to console indicating a possible connection leak. Another message will tell if the possible logged leak has been released. A value of 0 (default) meaning Leak detection is disable |*integer*| 0|
+
 
 ## `createPoolCluster(options) → PoolCluster`
 
@@ -324,7 +327,7 @@ Specific options for pool cluster are :
 |---:|---|:---:|:---:| 
 | **`canRetry`** | When getting a connection from pool fails, can cluster retry with other pools |*boolean* | true |
 | **`removeNodeErrorCount`** | Maximum number of consecutive connection fail from a pool before pool is removed from cluster configuration. null means node won't be removed|*integer* | 5 |
-| **`restoreNodeTimeout`** | delay before a pool can be reused after a connection fails. 0 = can be reused immediately (in ms) |*integer*| 0|
+| **`restoreNodeTimeout`** | delay before a pool can be reused after a connection fails. 0 = can be reused immediately (in ms) |*integer*| 1000|
 | **`defaultSelector`** | default pools selector. Can be 'RR' (round-robin), 'RANDOM' or 'ORDER' (use in sequence = always use first pools unless fails) |*string*| 'RR'|
 
 ## `version → String`
@@ -450,6 +453,7 @@ connection.query('select * from animals')
 
 ### Query options
 
+* [`timeout`](#timeout)
 * [`namedPlaceholders`](#namedPlaceholders)
 * [`typeCast`](#typeCast)
 * [`rowsAsArray`](#rowsAsArray)
@@ -459,6 +463,47 @@ connection.query('select * from animals')
 * [`bigNumberStrings`](#bigNumberStrings)
 
 Those options can be set on the query level, but are usually set at the connection level, and will then apply to all queries. 
+
+
+#### `timeout`
+
+*number, timeout in ms*
+
+This option is only permitted for MariaDB server >= 10.1.2. 
+
+This set a timeout to query operation. 
+Driver internally use `SET STATEMENT max_statement_time=<timeout> FOR <command>` permitting to cancel operation when timeout is reached, 
+
+limitation: when use for multiple-queries (option `multipleStatements` set), only the first query will be timeout !!! 
+
+Implementation of max_statement_time is engine dependent, so there might be some differences: For example, with Galera engine, a commits will ensure replication to other nodes to be done, possibly then exceeded timeout, to ensure proper server state. 
+
+
+```javascript
+//query that takes more than 20s
+connection
+  .query({sql: 'information_schema.tables, information_schema.tables as t2', timeout: 100 })
+  .then(...)
+  .catch(err => {
+          // SqlError: (conn=2987, no: 1969, SQLState: 70100) Query execution was interrupted (max_statement_time exceeded)
+          // sql: select * from information_schema.columns as c1, information_schema.tables, information_schema.tables as t2 - parameters:[]
+          // at Object.module.exports.createError (C:\projets\mariadb-connector-nodejs.git\lib\misc\errors.js:55:10)
+          // at PacketNodeEncoded.readError (C:\projets\mariadb-connector-nodejs.git\lib\io\packet.js:510:19)
+          // at Query.readResponsePacket (C:\projets\mariadb-connector-nodejs.git\lib\cmd\resultset.js:46:28)
+          // at PacketInputStream.receivePacketBasic (C:\projets\mariadb-connector-nodejs.git\lib\io\packet-input-stream.js:104:9)
+          // at PacketInputStream.onData (C:\projets\mariadb-connector-nodejs.git\lib\io\packet-input-stream.js:160:20)
+          // at Socket.emit (events.js:210:5)
+          // at addChunk (_stream_readable.js:309:12)
+          // at readableAddChunk (_stream_readable.js:290:11)
+          // at Socket.Readable.push (_stream_readable.js:224:10)
+          // at TCP.onStreamRead (internal/stream_base_commons.js:182:23) {
+          //     fatal: true,
+          //         errno: 1969,
+          //         sqlState: '70100',
+          //         code: 'ER_STATEMENT_TIMEOUT'
+          // }
+  });
+```
 
 #### `namedPlaceholders`
 
@@ -930,7 +975,10 @@ const myTable = "table:a"
 const cmd = 'SELECT * FROM ' + conn.escapeId(myTable) + ' where myCol = ' + conn.escape(myColVar);
 // cmd value will be:
 // "SELECT * FROM `table:a` where myCol = 'let\\'s go'"
-
+// using template literals:
+con.query(`SELECT * FROM ${con.escapeId(myTable)} where myCol = ?`, [myColVar])
+  .then(res => { ... })
+  .catch(err=> { ... }); 
 ```
 
 
@@ -1233,7 +1281,7 @@ const mariadb = require('mariadb');
 const cluster = mariadb.createPoolCluster({ removeNodeErrorCount: 20, restoreNodeTimeout: 5000 });
 cluster.add("master", { host: 'mydb1.com', user: 'myUser', connectionLimit: 5 });
 cluster.add("slave1", { host: 'mydb2.com', user: 'myUser', connectionLimit: 5 });
-cluster.add("slave2", { host: 'mydb3.com', user: 'myUser', connectionLimit: 5 });*
+cluster.add("slave2", { host: 'mydb3.com', user: 'myUser', connectionLimit: 5 });
 cluster.on('remove', node => {
   console.log(`node ${node} was removed`);
 })

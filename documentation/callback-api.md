@@ -193,6 +193,7 @@ Essential options list:
 | **`compress`** | Compresses the exchange with the database through gzip.  This permits better performance when the database is not in the same location.  |*boolean*| false|
 | **`connectTimeout`** | Sets the connection timeout in milliseconds. |*integer* | 10 000|
 | **`socketTimeout`** | Sets the socket timeout in milliseconds after connection succeeds. A value of `0` disables the timeout. |*integer* | 0|
+| **`queryTimeout`** | Set maximum query time in ms (an error will be thrown if limit is reached). 0 or undefined meaning no timeout. This can be superseded for a query using `timeout` option|*int* |0|
 | **`rowsAsArray`** | Returns result-sets as arrays, rather than JSON. This is a faster way to get results. For more information, see Query. |*boolean* | false|
 
 For more information, see the [Connection Options](/documentation/connection-options.md) documentation. 
@@ -269,7 +270,8 @@ Specific options for pools are :
 | **`minimumIdle`** | Permit to set a minimum number of connection in pool. **Recommendation is to use fixed pool, so not setting this value**.|*integer* | *set to connectionLimit value* |
 | **`minDelayValidation`** | When asking a connection to pool, the pool will validate the connection state. "minDelayValidation" permits disabling this validation if the connection has been borrowed recently avoiding useless verifications in case of frequent reuse of connections. 0 means validation is done each time the connection is asked. (in ms) |*integer*| 500|
 | **`noControlAfterUse`** | After giving back connection to pool (connection.end) connector will reset or rollback connection to ensure a valid state. This option permit to disable those controls|*boolean*| false|
-| **`resetAfterUse`** | When a connection is given back to pool, reset the connection if the server allows it (MariaDB >=10.2.4 / MySQL >= 5.7.3). If disabled or server version doesn't allows reset, pool will only rollback open transaction if any|*boolean*| true|
+| **`resetAfterUse`** | When a connection is given back to pool, reset the connection if the server allows it (only for MariaDB version >= 10.2.22 /10.3.13). If disabled or server version doesn't allows reset, pool will only rollback open transaction if any|*boolean*| true|
+| **`leakDetectionTimeout`** |Permit to indicate a timeout to log connection borrowed from pool. When a connection is borrowed from pool and this timeout is reached, a message will be logged to console indicating a possible connection leak. Another message will tell if the possible logged leak has been released. A value of 0 (default) meaning Leak detection is disable |*integer*| 0|
 
 ### Pool events
 
@@ -325,7 +327,7 @@ Specific options for pool cluster are :
 |---:|---|:---:|:---:| 
 | **`canRetry`** | When getting a connection from pool fails, can cluster retry with other pools |*boolean* | true |
 | **`removeNodeErrorCount`** | Maximum number of consecutive connection fail from a pool before pool is removed from cluster configuration. null means node won't be removed|*integer* | 5 |
-| **`restoreNodeTimeout`** | delay before a pool can be reused after a connection fails. 0 = can be reused immediately (in ms) |*integer*| 0|
+| **`restoreNodeTimeout`** | delay before a pool can be reused after a connection fails. 0 = can be reused immediately (in ms) |*integer*| 1000|
 | **`defaultSelector`** | default pools selector. Can be 'RR' (round-robin), 'RANDOM' or 'ORDER' (use in sequence = always use first pools unless fails) |*string*| 'RR'|
 
 
@@ -666,6 +668,16 @@ Value will be enclosed by '`' character if content doesn't satisfy:
 * ASCII: [0-9,a-z,A-Z$_] (numerals 0-9, basic Latin letters, both lowercase and uppercase, dollar sign, underscore)
 * Extended: U+0080 .. U+FFFF
 and escaping '`' character if needed. 
+```javascript
+const myColVar = "let'go";
+const myTable = "table:a"
+const cmd = 'SELECT * FROM ' + conn.escapeId(myTable) + ' where myCol = ' + conn.escape(myColVar);
+// cmd value will be:
+// "SELECT * FROM `table:a` where myCol = 'let\\'s go'"
+
+// using template literals:
+con.query(`SELECT * FROM ${con.escapeId(myTable)} where myCol = ?`, [myColVar], (err, rows) => { });
+```
 
 
 ## `connection.pause()`

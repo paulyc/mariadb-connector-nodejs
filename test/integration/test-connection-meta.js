@@ -3,13 +3,13 @@
 const base = require('../base.js');
 const assert = require('chai').assert;
 
-describe('Connection meta', function() {
+describe('Connection meta', function () {
   it('server version', () => {
     const serverVersion = shareConn.serverVersion();
     if (process.env.DB) {
       if (process.env.DB === 'build') {
         //last mariadb build version
-        assert(serverVersion.startsWith('10.4'));
+        assert(serverVersion.startsWith('10.5'));
       } else {
         const version =
           process.platform === 'win32'
@@ -20,7 +20,7 @@ describe('Connection meta', function() {
     }
   });
 
-  it('server version before connect error', done => {
+  it('server version before connect error', (done) => {
     const conn = base.createCallbackConnection();
     try {
       conn.serverVersion();
@@ -49,7 +49,7 @@ describe('Connection meta', function() {
     }
   });
 
-  it('isMariaDB before connect error', done => {
+  it('isMariaDB before connect error', (done) => {
     const conn = base.createCallbackConnection();
     try {
       conn.info.isMariaDB();
@@ -63,7 +63,7 @@ describe('Connection meta', function() {
     }
   });
 
-  it('info.hasMinVersion before connect error', done => {
+  it('info.hasMinVersion before connect error', (done) => {
     const conn = base.createCallbackConnection();
     try {
       conn.info.hasMinVersion();

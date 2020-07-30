@@ -1,26 +1,27 @@
 import mariadb = require('..');
-import { FieldInfo, Types } from '..';
+import { Connection, FieldInfo, ConnectionConfig, PoolConfig } from '..';
 import { Stream } from 'stream';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { baseConfig } = require('../test/conf.js');
 
-function createConnection(options?: unknown): Promise<mariadb.Connection> {
+function createConnection(option?: ConnectionConfig): Promise<mariadb.Connection> {
   return mariadb.createConnection({
     host: baseConfig.host,
-    user: baseConfig.user,
-    password: baseConfig.password,
-    ...options
+    user: option.user,
+    password: baseConfig.password
   });
 }
 
-function createPoolConfig(options?: unknown): mariadb.PoolConfig {
-  return {
-    host: baseConfig.host,
-    user: baseConfig.user,
-    password: baseConfig.password,
-    ...options
-  };
+function createPoolConfig(options?: PoolConfig): mariadb.PoolConfig {
+  return Object.assign(
+    {
+      host: baseConfig.host,
+      user: baseConfig.user,
+      password: baseConfig.password
+    },
+    options
+  );
 }
 
 function createPool(options?: unknown): mariadb.Pool {
@@ -71,14 +72,14 @@ async function testMisc(): Promise<void> {
   let currRow = 0;
   connection
     .queryStream('SELECT * from mysql.user')
-    .on('error', err => {
+    .on('error', (err: Error) => {
       throw err;
     })
-    .on('fields', meta => {
+    .on('fields', (meta) => {
       console.log(meta);
       metaReceived = true;
     })
-    .on('data', row => {
+    .on('data', (row) => {
       console.log(row.length > 1);
       currRow++;
     })
@@ -111,6 +112,10 @@ async function testMisc(): Promise<void> {
   console.log('ended');
 
   connection.destroy();
+  connection.escape('test');
+  connection.escape(true);
+  connection.escape(5);
+  connection.escapeId('myColumn');
 
   await createConnection({ multipleStatements: true });
 
@@ -160,6 +165,19 @@ async function testPool(): Promise<void> {
   pool = createPool({
     connectionLimit: 10
   });
+  function displayConn(conn: Connection): void {
+    console.log(conn);
+  }
+  pool.on('acquire', displayConn).on('acquire', displayConn);
+  pool.on('connection', displayConn).on('connection', displayConn);
+  pool
+    .on('enqueue', () => {
+      console.log('enqueue');
+    })
+    .on('enqueue', () => {
+      console.log('enqueue');
+    });
+  pool.on('release', displayConn).on('release', displayConn);
 
   const rows = await pool.query('SELECT 1 + 1 AS solution');
   console.log(rows[0].solution === 2);
@@ -167,6 +185,11 @@ async function testPool(): Promise<void> {
   pool = createPool();
 
   const connection = await pool.getConnection();
+  pool.escape('test');
+  pool.escape(true);
+  pool.escape(5);
+  pool.escapeId('myColumn');
+
   console.log(connection.threadId != null);
 
   await connection.query('SELECT 1 + 1 AS solution');

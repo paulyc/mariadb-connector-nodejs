@@ -9,12 +9,13 @@ const Command = require('../../lib/cmd/command');
 const ConnectionInformation = require('../../lib/misc/connection-information');
 const EventEmitter = require('events');
 const Collations = require('../../lib/const/collations');
+const base = require('../base.js');
 
 describe('test PacketInputStream data', () => {
   let bigSize = 20 * 1024 * 1024 - 1;
   let buf;
   const info = new ConnectionInformation();
-  const unexpectedPacket = packet => {
+  const unexpectedPacket = (packet) => {
     throw new Error('unexpected packet');
   };
 
@@ -42,7 +43,7 @@ describe('test PacketInputStream data', () => {
     let buf = Buffer.from([5, 0, 0, 0, 1, 2, 3, 4, 5]);
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -59,7 +60,7 @@ describe('test PacketInputStream data', () => {
   it('small packet multi part header', () => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -77,7 +78,7 @@ describe('test PacketInputStream data', () => {
   it('small packet multi part header 2', () => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -96,7 +97,7 @@ describe('test PacketInputStream data', () => {
   it('small packet multi part header 3', () => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -116,7 +117,7 @@ describe('test PacketInputStream data', () => {
   it('small packet multi part header 4', () => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -136,7 +137,7 @@ describe('test PacketInputStream data', () => {
   it('small packet multi part data', () => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(Buffer.from([1, 2, 3, 4, 5]), packet.buf);
       })
     );
@@ -152,10 +153,10 @@ describe('test PacketInputStream data', () => {
     pis.onData(Buffer.from([3, 4, 5]));
   });
 
-  it('big packet multi part data', done => {
+  it('big packet multi part data', (done) => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(buf, packet.buf);
         done();
       })
@@ -172,10 +173,10 @@ describe('test PacketInputStream data', () => {
     pis.onData(Buffer.concat([Buffer.from([0x00, 0x00, 0x40, 0x01]), buf.slice(16777215)]));
   }).timeout(300000);
 
-  it('big packet multi part data with part', done => {
+  it('big packet multi part data with part', (done) => {
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(buf, packet.buf);
         done();
       })
@@ -210,7 +211,7 @@ describe('test PacketInputStream data', () => {
 
     const queue = new Queue();
     queue.push(
-      new EmptyCmd(packet => {
+      new EmptyCmd((packet) => {
         assert.deepEqual(bufRes, packet.buf);
       })
     );
@@ -228,7 +229,9 @@ describe('test PacketInputStream data', () => {
     const opts = Object.assign(new EventEmitter(), new ConnOptions(Conf.baseConfig));
     const queue = new Queue();
     let pis = new PacketInputStream(unexpectedPacket, queue, null, opts, info);
-    assert.equal(pis.encoding, 'utf8');
+    if (base.utf8Collation()) {
+      assert.equal(pis.encoding, 'utf8');
+    }
     opts.emit('collation', Collations.fromName('BIG5_CHINESE_CI'));
     assert.equal(pis.encoding, 'big5');
   });
